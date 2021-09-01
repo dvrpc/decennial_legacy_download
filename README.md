@@ -42,6 +42,16 @@ nj_pl_4_all.r
 join_and_process.r 
 -joins processes and exports to appropriate file folders 
 
+join_and_process_CDP.r
+-uses a list of cdp GEOID's because they are not able to be grabbed by county GEOID
+
+int_MCD_PhiCPA script.r
+-edits excisting data to create the planning district and compresses Philadelphia planning district into one output
+
+historic.R
+-grabs 2000 and 2010 equalivant data
+-is currently missing 2000 county subdivisions and 2000 planning districts 
+
 ## Running the Code
 
 1. Open RStudio. 
