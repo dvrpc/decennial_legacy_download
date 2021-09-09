@@ -286,9 +286,9 @@ BlockToPhiPlanDist_2000 <- BlockToPhiPlanDist_2000 %>% select(-c(GEOID, NAME, MC
 philaPD00 <- aggregate(BlockToPhiPlanDist_2000, 
                         by = list(unique.values = BlockToPhiPlanDist_2000$GISJOIN2), 
                         FUN = sum)
-noPhlMCD00<- dvrpccountySubdivision00[!(dvrpccountySubdivision00$unique.values=="4210160000"),]
+noPhlMCD00<- dvrpccountySubdivision00[!(dvrpccountySubdivision00$GEOID=="4210160000"),]
 
-dvrpcPD00 <- bind_rows(noPhlMCD, philaPD10)
+dvrpcPD00 <- bind_rows(noPhlMCD00, philaPD00)
 
 dvrpcPD00$GEOID <- as.character(dvrpcPD00$GEOID)
 
