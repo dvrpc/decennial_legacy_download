@@ -9,17 +9,22 @@ library(data.table)
 library(readr)
 
 census_api_key("219399afeaa3b3c28f7b5351b56bb92d7d0f576d")
+vari00 <- load_variables(2000, "sf1")
+vari10 <- load_variables(2010, "sf1")
+write_csv(vari00, "x2000Vari.csv")
+write_csv(vari10, "x2010Vari.csv")
+
 
 vars00 <- c("H003001",
             "H003002",
             "H003003",
             "P001001",
-            "P004003",
-            "P005003",
-            "P005004",
-            "P005005",
-            "P005006",
-            "P005007",
+            "P008010",
+            "P008003",
+            "P008004",
+            "P008005",
+            "P008006",
+            "P008007",
             "P008008",
             "P008009",
             "P027024",
@@ -31,21 +36,21 @@ vars00 <- c("H003001",
             "P037006",
             "P037007",
             "PCT016034",
-            "P037009"
-            )
+            "P037009")
+            
 
 vars10 <- c("H003001",
             "H003002",
             "H003003",
             "P001001",
-            "P004002",
-            "P008003",
-            "P008004",
-            "P008005",
-            "P008006",
-            "P008007",
-            "P008008",
-            "P008009",
+            "P004003",
+            "P005003",
+            "P005004",
+            "P005005",
+            "P005006",
+            "P005007",
+            "P005008",
+            "P005009",
             "P042001",
             "P042002",
             "P042003",
@@ -57,8 +62,6 @@ vars10 <- c("H003001",
             "P042009",
             "P042010")
 
-var2000 <- load_variables(2000, "sf1")
-write_csv(var2000,"var2000.csv")
 ##########county##############
 
 #2010
@@ -77,6 +80,8 @@ dvrpcCounty10 <- bind_rows(countyPA10, countyNJ10)
 allCountyPA00 <- get_decennial(geography = "county", variables = vars00, year = 2000, state = "PA", geometry = TRUE, output = "wide")
 
 allCountyNJ00 <- get_decennial(geography = "county", variables = vars00, year = 2000, state = "NJ", geometry = TRUE, output = "wide")
+
+countyPA00 <- left_join(allCountyPA00_1, allCountyPA00_2, by )
 
 countyPA00<- allCountyPA00 %>% filter(grepl("^42017|^42029|^42045|^42091|^42101", GEOID))
 
@@ -209,10 +214,44 @@ countySubdivisionNJ10<- allcountySubdivisionNJ10 %>% filter(grepl("^34005|^34007
 
 dvrpccountySubdivision10 <- bind_rows(countySubdivisionPA10, countySubdivisionNJ10)
 
-#2000 BROKEN
+princeton <- subset(dvrpccountySubdivision10, GEOID == "3402160900" | GEOID == "3402160915")
 
+dvrpccountySubdivision10 <- dvrpccountySubdivision10 [(!(dvrpccountySubdivision10$GEOID=="3402160900") & !(dvrpccountySubdivision10$GEOID=="3402160915")),]
 
+princeton$GEOID <- as.numeric(princeton$GEOID)
+
+princeton <- subset(princeton, select = -c(NAME))
+
+princeton <- aggregate(princeton, 
+                        by = list(unique.values = princeton$P042009), 
+                        FUN = sum)
+
+princeton$GEOID <- as.character(princeton$GEOID)
+
+dvrpccountySubdivision10 <- bind_rows(dvrpccountySubdivision10, princeton)
+
+#2000 
+
+BlockToMCD_2000 <- read_csv("G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd\\BlockToMCD_2000.csv")
+
+BlockToMCD_2000 <- BlockToMCD_2000 %>% select(-c(NAME, MCD2000, NAME_1, GISJOIN))
+
+dvrpccountySubdivision00 <- aggregate(BlockToMCD_2000, 
+                        by = list(unique.values = BlockToMCD_2000$GISJOIN2), 
+                        FUN = sum)
+dvrpccountySubdivision00$unique.values <- as.character(dvrpccountySubdivision00$unique.values)
+
+dvrpccountySubdivision00 <- dvrpccountySubdivision00 %>%
+  mutate(unique.values = replace(unique.values, unique.values == "3402177210", "3402163850"))
+
+dvrpccountySubdivision00 <- subset(dvrpccountySubdivision00, select = -c(FID, FID_1, OBJECTID, GEOID, ORIG_FID, FID_2, SUB_MCD, SUBNAME,
+                                                                         GISJOIN2, GEOID_t))
+
+dvrpccountySubdivision00 <- dvrpccountySubdivision00 %>% rename(GEOID = unique.values)
 #############planning dist####
+
+#2010
+
 X2010distLookup <- read_csv("~/censusRetrival/2000distLookup.csv")
 
 philaPD10 <- dvrpctract10 %>% filter(GEOID %in% c(X2010distLookup$TractID))
@@ -235,7 +274,23 @@ philaPD10 = subset(philaPD10, select = -c(GEOID,DistrictID))
 
 philaPD10 <- philaPD10 %>% rename(GEOID = unique.values)
 
-dvrpcPD <- bind_rows(noPhlMCD, philaPD10)
+dvrpcPD10 <- bind_rows(noPhlMCD, philaPD10)
+
+## 2000
+
+BlockToPhiPlanDist_2000 <- read_csv("G:/Shared drives/Data Coordination/2020 Census/2020 Redistricting Data/historicData/mcd/BlockToPhiPlanDist_2000.txt", 
+                                    col_types = cols(GEOID = col_character()))
+
+BlockToPhiPlanDist_2000 <- BlockToPhiPlanDist_2000 %>% select(-c(GEOID, NAME, MCD2000, NAME_1, SUB_MCD, GISJOIN, DistrictNa))
+
+philaPD00 <- aggregate(BlockToPhiPlanDist_2000, 
+                        by = list(unique.values = BlockToPhiPlanDist_2000$GISJOIN2), 
+                        FUN = sum)
+noPhlMCD00<- dvrpccountySubdivision00[!(dvrpccountySubdivision00$unique.values=="4210160000"),]
+
+dvrpcPD00 <- bind_rows(noPhlMCD, philaPD10)
+
+dvrpcPD00$GEOID <- as.character(dvrpcPD00$GEOID)
 
 ##############export######
 #county
@@ -291,8 +346,27 @@ fileName = paste(path_out, 'tract2000.csv',sep = '')
 write_csv(dvrpcTract2000,fileName)
 
 #planning district
-st_write(dvrpcPD, "G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\planning dist\\pd2010.shp")
-PD2010 <- dvrpcPD %>% select(-c(geometry))
-path_out = 'G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\planning dist\\'
-fileName = paste(path_out, 'PD2010.csv',sep = '')
+st_write(dvrpcPD10, "G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd_phi_cpa\\mcd_Phi_CPA2010.shp")
+PD2010 <- dvrpcPD10 %>% select(-c(geometry))
+path_out = 'G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd_phi_cpa\\'
+fileName = paste(path_out, 'mcd_Phi_CPA2010.csv',sep = '')
 write_csv(PD2010,fileName)
+
+st_write(dvrpcPD00, "G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd_phi_cpa\\mcd_Phi_CPA2000.shp")
+dvrpcPD00 <- dvrpcPD00 %>% select(-c(geometry))
+path_out = 'G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd_phi_cpa\\'
+fileName = paste(path_out, 'mcd_Phi_CPA2000.csv',sep = '')
+write_csv(dvrpcPD00,fileName)
+
+#county subs
+st_write(dvrpccountySubdivision10, "G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd\\mcd2010.shp")
+dvrpccountySubdivision10 <- dvrpccountySubdivision10 %>% select(-c(geometry))
+path_out = 'G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd\\'
+fileName = paste(path_out, 'MCD2010.csv',sep = '')
+write_csv(dvrpccountySubdivision10,fileName)
+
+st_write(dvrpccountySubdivision00, "G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd\\mcd2000.shp")
+dvrpccountySubdivision00 <- dvrpccountySubdivision00 %>% select(-c(geometry))
+path_out = 'G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd\\'
+fileName = paste(path_out, 'MCD2000.csv',sep = '')
+write_csv(dvrpccountySubdivision00,fileName)
