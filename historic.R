@@ -8,7 +8,7 @@ library(reshape2)
 library(data.table)
 library(readr)
 
-census_api_key("219399afeaa3b3c28f7b5351b56bb92d7d0f576d")
+census_api_key("")
 vari00 <- load_variables(2000, "sf1")
 vari10 <- load_variables(2010, "sf1")
 write_csv(vari00, "x2000Vari.csv")
@@ -231,10 +231,19 @@ princeton$GEOID <- as.character(princeton$GEOID)
 dvrpccountySubdivision10 <- bind_rows(dvrpccountySubdivision10, princeton)
 
 #2000 
+BlockToMCD_2000 <- read_csv("G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd\\Sept10\\BlockToMCD.txt", 
+                       col_types = cols(SUB_MCD = col_character(), 
+                                        SUBNAME = col_character()))
 
-BlockToMCD_2000 <- read_csv("G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd\\BlockToMCD_2000.csv")
+BlockToMCD_2000 <- BlockToMCD_2000 %>% select(GEOID, GISJOIN2)
 
-BlockToMCD_2000 <- BlockToMCD_2000 %>% select(-c(NAME, MCD2000, NAME_1, GISJOIN))
+BlockToMCD_2000$GEOID <- as.character(BlockToMCD_2000$GEOID)
+
+BlockToMCD_2000 <- left_join(dvrpcBlock00, BlockToMCD_2000, by = c("GEOID" = "GEOID"))
+
+BlockToMCD_2000$GEOID <- as.numeric(BlockToMCD_2000$GEOID)
+
+BlockToMCD_2000 <- subset(BlockToMCD_2000, select = -c(NAME))
 
 dvrpccountySubdivision00 <- aggregate(BlockToMCD_2000, 
                         by = list(unique.values = BlockToMCD_2000$GISJOIN2), 
@@ -244,8 +253,7 @@ dvrpccountySubdivision00$unique.values <- as.character(dvrpccountySubdivision00$
 dvrpccountySubdivision00 <- dvrpccountySubdivision00 %>%
   mutate(unique.values = replace(unique.values, unique.values == "3402177210", "3402163850"))
 
-dvrpccountySubdivision00 <- subset(dvrpccountySubdivision00, select = -c(FID, FID_1, OBJECTID, GEOID, ORIG_FID, FID_2, SUB_MCD, SUBNAME,
-                                                                         GISJOIN2, GEOID_t))
+dvrpccountySubdivision00 <- subset(dvrpccountySubdivision00, select = -c(GISJOIN2, GEOID))
 
 dvrpccountySubdivision00 <- dvrpccountySubdivision00 %>% rename(GEOID = unique.values)
 #############planning dist####
@@ -277,20 +285,28 @@ philaPD10 <- philaPD10 %>% rename(GEOID = unique.values)
 dvrpcPD10 <- bind_rows(noPhlMCD, philaPD10)
 
 ## 2000
-
 BlockToPhiPlanDist_2000 <- read_csv("G:/Shared drives/Data Coordination/2020 Census/2020 Redistricting Data/historicData/mcd/BlockToPhiPlanDist_2000.txt", 
-                                    col_types = cols(GEOID = col_character()))
+                                    col_types = cols(SUB_MCD = col_character()))
 
-BlockToPhiPlanDist_2000 <- BlockToPhiPlanDist_2000 %>% select(-c(GEOID, NAME, MCD2000, NAME_1, SUB_MCD, GISJOIN, DistrictNa))
+BlockToPhiPlanDist_2000 <- BlockToPhiPlanDist_2000 %>% select(GEOID, GISJOIN2)
 
-philaPD00 <- aggregate(BlockToPhiPlanDist_2000, 
-                        by = list(unique.values = BlockToPhiPlanDist_2000$GISJOIN2), 
-                        FUN = sum)
+dvrpcBlock00$GEOID <- as.numeric(dvrpcBlock00$GEOID)
+
+BlockToPhiPlanDist_2000 <- left_join(BlockToPhiPlanDist_2000, dvrpcBlock00, by = c("GEOID" = "GEOID"))
+
+BlockToPhiPlanDist_2000 <- subset(BlockToPhiPlanDist_2000, select = -c(NAME, geometry))
+
+philaPD00 <- BlockToPhiPlanDist_2000 %>% group_by(GISJOIN2) %>% summarise_each(funs(sum))
+
 noPhlMCD00<- dvrpccountySubdivision00[!(dvrpccountySubdivision00$GEOID=="4210160000"),]
 
-dvrpcPD00 <- bind_rows(noPhlMCD00, philaPD00)
+philaPD00 <- philaPD00 %>% select(-c(GEOID))
 
-dvrpcPD00$GEOID <- as.character(dvrpcPD00$GEOID)
+philaPD00 <- philaPD00 %>% rename(GEOID = GISJOIN2)
+
+philaPD00$GEOID <- as.character(philaPD00$GEOID)
+
+dvrpcPD00 <- bind_rows(noPhlMCD00, philaPD00)
 
 ##############export######
 #county
@@ -353,7 +369,7 @@ fileName = paste(path_out, 'mcd_Phi_CPA2010.csv',sep = '')
 write_csv(PD2010,fileName)
 
 st_write(dvrpcPD00, "G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd_phi_cpa\\mcd_Phi_CPA2000.shp")
-dvrpcPD00 <- dvrpcPD00 %>% select(-c(geometry))
+dvrpcPD00 <- st_set_geometry(dvrpcPD00, NULL)
 path_out = 'G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd_phi_cpa\\'
 fileName = paste(path_out, 'mcd_Phi_CPA2000.csv',sep = '')
 write_csv(dvrpcPD00,fileName)
@@ -366,7 +382,7 @@ fileName = paste(path_out, 'MCD2010.csv',sep = '')
 write_csv(dvrpccountySubdivision10,fileName)
 
 st_write(dvrpccountySubdivision00, "G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd\\mcd2000.shp")
-dvrpccountySubdivision00 <- dvrpccountySubdivision00 %>% select(-c(geometry))
+dvrpccountySubdivision00 <- st_set_geometry(dvrpccountySubdivision00, NULL)
 path_out = 'G:\\Shared drives\\Data Coordination\\2020 Census\\2020 Redistricting Data\\historicData\\mcd\\'
 fileName = paste(path_out, 'MCD2000.csv',sep = '')
 write_csv(dvrpccountySubdivision00,fileName)
