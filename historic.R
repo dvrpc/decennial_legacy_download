@@ -8,7 +8,7 @@ library(reshape2)
 library(data.table)
 library(readr)
 
-census_api_key("")
+census_api_key("Insert here")
 vari00 <- load_variables(2000, "sf1")
 vari10 <- load_variables(2010, "sf1")
 write_csv(vari00, "x2000Vari.csv")
@@ -248,6 +248,11 @@ BlockToMCD_2000 <- subset(BlockToMCD_2000, select = -c(NAME))
 dvrpccountySubdivision00 <- aggregate(BlockToMCD_2000, 
                         by = list(unique.values = BlockToMCD_2000$GISJOIN2), 
                         FUN = sum)
+
+dvrpccountySubdivision00$building1 <- as.numeric(substr(dvrpccountySubdivision00$unique.values, 1,2))
+
+dvrpccountySubdivision00$building2 <- as.numeric(substr(dvrpccountySubdivision00$unique.values, 4,6))
+
 dvrpccountySubdivision00$unique.values <- as.character(dvrpccountySubdivision00$unique.values)
 
 dvrpccountySubdivision00 <- dvrpccountySubdivision00 %>%
@@ -256,6 +261,14 @@ dvrpccountySubdivision00 <- dvrpccountySubdivision00 %>%
 dvrpccountySubdivision00 <- subset(dvrpccountySubdivision00, select = -c(GISJOIN2, GEOID))
 
 dvrpccountySubdivision00 <- dvrpccountySubdivision00 %>% rename(GEOID = unique.values)
+
+dvrpccountySubdivision00$GEOID <- as.character(dvrpccountySubdivision00$GEOID)
+
+dvrpccountySubdivision00$GEOID[dvrpccountySubdivision00$GEOID == "340021060915"] <- "340021060900"
+
+dvrpccountySubdivision00 <- dvrpccountySubdivision00 %>% group_by(GEOID) %>% summarise_each(funs(sum))
+
+dvrpccountySubdivision00$GEOID[dvrpccountySubdivision00$GEOID == "340021077210"] <- "340021063850"
 #############planning dist####
 
 #2010
@@ -284,6 +297,9 @@ philaPD10 <- philaPD10 %>% rename(GEOID = unique.values)
 
 dvrpcPD10 <- bind_rows(noPhlMCD, philaPD10)
 
+dvrpcPD10$GEOID[dvrpcPD10$GEOID == "6804321815"] <- "3402160900"
+
+
 ## 2000
 BlockToPhiPlanDist_2000 <- read_csv("G:/Shared drives/Data Coordination/2020 Census/2020 Redistricting Data/historicData/mcd/BlockToPhiPlanDist_2000.txt", 
                                     col_types = cols(SUB_MCD = col_character()))
@@ -307,6 +323,12 @@ philaPD00 <- philaPD00 %>% rename(GEOID = GISJOIN2)
 philaPD00$GEOID <- as.character(philaPD00$GEOID)
 
 dvrpcPD00 <- bind_rows(noPhlMCD00, philaPD00)
+
+dvrpcPD00$GEOID[dvrpcPD00$GEOID == "340021060915"] <- "340021060900"
+
+dvrpcPD00 <- dvrpcPD00 %>% group_by(GEOID) %>% summarise_each(funs(sum))
+
+dvrpcPD00$GEOID[dvrpcPD00$GEOID == "340021077210"] <- "340021063850"
 
 ##############export######
 #county
