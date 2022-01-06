@@ -7,13 +7,13 @@
 ## Installing Package Dependencies 
 
 The R script has the following dependencies: 
-censusap
-tidycensus
-tidyverse
-sf
-stringr
-reshape2
-data.table
+censusap;
+tidycensus;
+tidyverse;
+sf;
+stringr;
+reshape2;
+data.table;
 readr
 
 If you have not previously installed the dependencies, you will need to do so. If you try to run the script without installing the packages, you will get an error message like 
